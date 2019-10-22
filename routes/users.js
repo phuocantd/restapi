@@ -40,12 +40,6 @@ router.get("/", (req, res, next) => {
     });
 });
 
-router.get("/me", (req, res, next) => {
-  res.status(200).json({
-    message: "Order were fetched"
-  });
-});
-
 router.post("/register", (req, res, next) => {
   User.find({ email: req.body.email })
     .exec()
@@ -87,48 +81,24 @@ router.post("/register", (req, res, next) => {
 });
 
 router.post("/login", (req, res, next) => {
-  User.find({ email: req.body.email })
-    .exec()
-    .then(user => {
-      if (user.length < 1) {
-        return res.status(401).json({
-          message: "Auth failed"
-        });
-      } else {
-        bcrypt.compare(req.body.password, user[0].password, (err, result) => {
-          if (err) {
-            return res.status(401).json({
-              message: "Auth failed"
-            });
-          }
-          if (result) {
-            const token = jwt.sign(
-              {
-                email: user[0].email,
-                userId: user[0]._id
-              },
-              process.env.JWT_KEY,
-              {
-                expiresIn: "1h"
-              }
-            );
-            return res.status(200).json({
-              message: "Auth successfull",
-              token: token
-            });
-          }
-          res.status(401).json({
-            message: "Auth failed"
-          });
-        });
-      }
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json({
-        error: err
+  passport.authenticate("local", { session: false }, (err, user, info) => {
+    if (err || !user) {
+      return res.status(400).json({
+        message: info ? info.message : "Login failed",
+        user: user
       });
+    }
+
+    req.login(user, { session: false }, err => {
+      if (err) {
+        res.status(500).json(err);
+      }
+
+      const token = jwt.sign(user, process.env.JWT_KEY, { expiresIn: "1h" });
+
+      return res.status(200).json({ msg: 'login successfull', token });
     });
+  })(req, res);
 });
 
 module.exports = router;
