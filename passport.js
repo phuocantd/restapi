@@ -52,9 +52,16 @@ passport.use(
       jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
       secretOrKey: process.env.JWT_KEY
     },
-    async function(jwt_payload, cb) {
-      console.log(jwt_payload);
-      return cb(null, jwt_payload);
+    function(jwtPayload, cb) {
+      //find the user in db if needed
+      return UserModel.findOne({ email: jwtPayload.email })
+        .then(user => {
+          console.log(user);
+          return cb(null, user);
+        })
+        .catch(err => {
+          return cb(err);
+        });
     }
   )
 );
